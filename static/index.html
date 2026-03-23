@@ -1305,6 +1305,175 @@
                 font-size: 0.875rem;
             }
         }
+
+        /* 多选操作栏 */
+        .batch-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+
+        .batch-toolbar .select-all-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.875rem;
+            color: #374151;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .batch-toolbar .selected-count {
+            font-size: 0.875rem;
+            color: #3b82f6;
+            font-weight: 500;
+        }
+
+        .batch-toolbar .batch-actions {
+            display: flex;
+            gap: 8px;
+            margin-left: auto;
+        }
+
+        .account-checkbox {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: #3b82f6;
+            flex-shrink: 0;
+        }
+
+        /* 分页跳转 */
+        .page-jump {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-left: 16px;
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+
+        .page-jump input {
+            width: 56px;
+            padding: 4px 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            text-align: center;
+        }
+
+        .page-jump input:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        .page-size-select {
+            padding: 4px 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            background: white;
+            margin-left: 12px;
+        }
+
+        /* 常用标签 */
+        .common-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .common-tag {
+            padding: 4px 10px;
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            color: #475569;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .common-tag:hover {
+            background: #dbeafe;
+            border-color: #93c5fd;
+            color: #1d4ed8;
+        }
+
+        /* 标签模式选择 */
+        .tag-mode-group {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 12px;
+        }
+
+        .tag-mode-group label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.875rem;
+            color: #374151;
+            cursor: pointer;
+        }
+
+        /* 标签搜索自动补全 */
+        .tag-search-wrapper {
+            position: relative;
+        }
+
+        .tag-autocomplete {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-top: none;
+            border-radius: 0 0 6px 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            z-index: 100;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .tag-autocomplete.show {
+            display: block;
+        }
+
+        .tag-autocomplete-item {
+            padding: 8px 12px;
+            font-size: 0.875rem;
+            color: #374151;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tag-autocomplete-item:hover,
+        .tag-autocomplete-item.active {
+            background: #eff6ff;
+            color: #1d4ed8;
+        }
+
+        .tag-autocomplete-item .tag-match {
+            background: #fef08a;
+            border-radius: 2px;
+        }
+
+        .tag-autocomplete-hint {
+            padding: 8px 12px;
+            font-size: 0.75rem;
+            color: #9ca3af;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -1377,8 +1546,13 @@
                                 <div class="flex-1">
                                     <input type="text" id="emailSearch" class="form-control" placeholder="按邮箱账号搜索..." onkeypress="handleSearchKeyPress(event)">
                                 </div>
-                                <div class="flex-1">
-                                    <input type="text" id="tagSearch" class="form-control" placeholder="按标签搜索..." onkeypress="handleSearchKeyPress(event)">
+                                <div class="flex-1 tag-search-wrapper">
+                                    <input type="text" id="tagSearch" class="form-control" placeholder="按标签搜索..." autocomplete="off"
+                                        onkeypress="handleSearchKeyPress(event)"
+                                        oninput="onTagSearchInput()"
+                                        onfocus="onTagSearchInput()"
+                                        onkeydown="handleTagAutocompleteNav(event)">
+                                    <div id="tagAutocomplete" class="tag-autocomplete"></div>
                                 </div>
                                 <button class="btn btn-primary" onclick="searchAccounts()">
                                     <span>🔍</span>
@@ -1396,7 +1570,34 @@
                             <div class="flex gap-4 text-sm">
                                 <span>总数：<strong id="totalAccounts">0</strong></span>
                                 <span>当前页：<strong id="currentPage">1</strong></span>
-                                <span>每页：<strong id="pageSize">10</strong></span>
+                                <span>每页：
+                                    <select class="page-size-select" id="pageSizeSelect" onchange="changePageSize(this.value)">
+                                        <option value="10">10</option>
+                                        <option value="20">20</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                    </select>
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- 批量操作栏 -->
+                        <div id="batchToolbar" class="batch-toolbar" style="display: none;">
+                            <label class="select-all-label">
+                                <input type="checkbox" class="account-checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()">
+                                全选本页
+                            </label>
+                            <span class="selected-count" id="selectedCount">已选 0 个</span>
+                            <div class="batch-actions">
+                                <button class="btn btn-primary btn-sm" onclick="batchEditTags()">
+                                    <span>🏷️</span> 批量打标签
+                                </button>
+                                <button class="btn btn-danger btn-sm" onclick="batchDeleteAccounts()">
+                                    <span>🗑️</span> 批量删除
+                                </button>
+                                <button class="btn btn-secondary btn-sm" onclick="clearSelection()">
+                                    取消选择
+                                </button>
                             </div>
                         </div>
 
@@ -1418,6 +1619,12 @@
                                 下一页
                                 <span>→</span>
                             </button>
+                            <div class="page-jump">
+                                跳转
+                                <input type="number" id="jumpPageInput" min="1" placeholder="页码" onkeypress="if(event.key==='Enter')jumpToPage()">
+                                / <span id="totalPagesLabel">1</span> 页
+                                <button class="btn btn-secondary btn-sm" onclick="jumpToPage()">Go</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1965,20 +2172,29 @@ example3@outlook.com----password3----refresh_token3----client_id3"></textarea>
     <div id="tagsModal" class="modal">
         <div class="modal-content" style="max-width: 500px;">
             <div class="modal-header">
-                <h3>管理账户标签</h3>
+                <h3 id="tagsModalTitle">管理账户标签</h3>
                 <span class="close" onclick="closeTagsModal()">&times;</span>
             </div>
             <div class="modal-body">
+                <!-- 批量模式选项 -->
+                <div id="tagModeGroup" class="tag-mode-group" style="display: none;">
+                    <label><input type="radio" name="tagMode" value="add" checked> 追加标签</label>
+                    <label><input type="radio" name="tagMode" value="replace"> 替换标签</label>
+                </div>
                 <div class="form-group">
-                    <label for="currentTags">当前标签</label>
+                    <label>当前标签</label>
                     <div id="currentTagsList" class="tags-list"></div>
                 </div>
                 <div class="form-group">
-                    <label for="newTag">添加新标签</label>
+                    <label>添加新标签 <span style="font-size:0.75rem;color:#9ca3af;">(支持逗号分隔批量添加)</span></label>
                     <div class="input-group">
-                        <input type="text" id="newTag" class="form-control" placeholder="输入标签名称">
+                        <input type="text" id="newTag" class="form-control" placeholder="标签1, 标签2, 标签3" onkeypress="if(event.key==='Enter'){addTag();event.preventDefault();}">
                         <button class="btn btn-primary" onclick="addTag()">添加</button>
                     </div>
+                </div>
+                <div class="form-group" id="commonTagsGroup" style="display: none;">
+                    <label>常用标签 <span style="font-size:0.75rem;color:#9ca3af;">(点击添加)</span></label>
+                    <div id="commonTagsList" class="common-tags"></div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -2016,7 +2232,10 @@ example3@outlook.com----password3----refresh_token3----client_id3"></textarea>
         let currentEmailFolder = 'all';
         let currentEmailPage = 1;
         let accounts = [];
-        
+
+        // 多选相关变量
+        let selectedAccounts = new Set();
+
         // 账户管理分页相关变量
         let accountsCurrentPage = 1;
         let accountsPageSize = 10;
@@ -2273,62 +2492,63 @@ example3@outlook.com----password3----refresh_token_here_3----client_id_here_3`;
 
         async function loadAccounts(page = 1, resetSearch = false) {
             if (resetSearch) {
-                // 重置搜索条件
                 currentEmailSearch = '';
                 currentTagSearch = '';
                 document.getElementById('emailSearch').value = '';
                 document.getElementById('tagSearch').value = '';
                 page = 1;
             }
-            
+
             accountsCurrentPage = page;
-            
+
             const accountsList = document.getElementById('accountsList');
             const accountsStats = document.getElementById('accountsStats');
             const accountsPagination = document.getElementById('accountsPagination');
-            
+
             accountsList.innerHTML = '<div class="loading">正在加载账户列表...</div>';
             accountsStats.style.display = 'none';
             accountsPagination.style.display = 'none';
 
             try {
-                // 构建请求参数
                 const params = new URLSearchParams({
                     page: accountsCurrentPage,
                     page_size: accountsPageSize
                 });
-                
+
                 if (currentEmailSearch) {
                     params.append('email_search', currentEmailSearch);
                 }
-                
+
                 if (currentTagSearch) {
                     params.append('tag_search', currentTagSearch);
                 }
-                
+
                 const data = await apiRequest(`/accounts?${params.toString()}`);
-                
+
                 accounts = data.accounts || [];
                 accountsTotalCount = data.total_accounts || 0;
                 accountsTotalPages = data.total_pages || 0;
-                
-                // 更新统计信息
+
                 updateAccountsStats();
-                
+                updateBatchToolbar();
+
                 if (accounts.length === 0) {
                     accountsList.innerHTML = '<div class="text-center" style="padding: 40px; color: #64748b;">暂无符合条件的账户</div>';
                     return;
                 }
 
-                accountsList.innerHTML = accounts.map(account => {
-                    // 生成标签HTML
-                    const tagsHtml = account.tags && account.tags.length > 0 
-                        ? `<div class="account-tags">${account.tags.map(tag => 
-                            `<span class="account-tag">${tag}</span>`).join('')}</div>` 
+                accountsList.innerHTML = accounts.map((account, accIdx) => {
+                    const tagsHtml = account.tags && account.tags.length > 0
+                        ? `<div class="account-tags">${account.tags.map(tag =>
+                            `<span class="account-tag">${tag}</span>`).join('')}</div>`
                         : '';
-                        
+                    const isChecked = selectedAccounts.has(account.email_id) ? 'checked' : '';
+
                     return `
                         <div class="account-item" onclick="viewAccountEmails('${account.email_id}')" oncontextmenu="showAccountContextMenu(event, '${account.email_id}')">
+                            <input type="checkbox" class="account-checkbox" ${isChecked}
+                                onclick="event.stopPropagation(); toggleSelectAccount('${account.email_id}', this)"
+                                oncontextmenu="event.stopPropagation();">
                             <div class="account-info">
                                 <div class="account-avatar">${account.email_id.charAt(0).toUpperCase()}</div>
                                 <div class="account-details">
@@ -2342,7 +2562,7 @@ example3@outlook.com----password3----refresh_token_here_3----client_id_here_3`;
                                     <span>📧</span>
                                     查看邮件
                                 </button>
-                                <button class="btn btn-secondary btn-sm" onclick="editAccountTags('${account.email_id}', ${JSON.stringify(account.tags || [])})">
+                                <button class="btn btn-secondary btn-sm" onclick="editAccountTagsByIndex(${accIdx})">
                                     <span>🏷️</span>
                                     管理标签
                                 </button>
@@ -3157,62 +3377,100 @@ GET /emails/{email_id}/{message_id}
             loadEmails();
         }
 
+        // 通过索引打开标签编辑
+        function editAccountTagsByIndex(idx) {
+            const account = accounts[idx];
+            if (account) {
+                editAccountTags(account.email_id, account.tags || []);
+            }
+        }
+
         // 打开标签管理模态框
-        function editAccountTags(emailId, tags) {
+        async function editAccountTags(emailId, tags) {
+            batchTagMode = false;
             currentEditAccount = emailId;
             currentEditTags = Array.isArray(tags) ? [...tags] : [];
-            
-            // 更新模态框标题
-            document.querySelector('#tagsModal .modal-header h3').textContent = `管理 ${emailId} 的标签`;
-            
-            // 显示当前标签
+
+            document.getElementById('tagsModalTitle').textContent = `管理 ${emailId} 的标签`;
+            document.getElementById('tagModeGroup').style.display = 'none';
+
             renderCurrentTags();
-            
-            // 显示模态框
+            await loadCommonTags();
             document.getElementById('tagsModal').style.display = 'flex';
         }
 
         // 渲染当前标签列表
         function renderCurrentTags() {
             const tagsList = document.getElementById('currentTagsList');
-            
+
             if (currentEditTags.length === 0) {
-                tagsList.innerHTML = '<p class="text-muted">暂无标签</p>';
+                tagsList.innerHTML = '<p style="color:#9ca3af;font-size:0.875rem;">暂无标签</p>';
                 return;
             }
-            
+
             tagsList.innerHTML = currentEditTags.map(tag => `
                 <div class="tag-item">
                     <span class="tag-name">${tag}</span>
-                    <button class="tag-delete" onclick="removeTag('${tag}')">×</button>
+                    <button class="tag-delete" onclick="removeTag('${tag.replace(/'/g, "\\'")}')">&times;</button>
                 </div>
             `).join('');
         }
 
-        // 添加新标签
+        // 添加新标签（支持逗号分隔批量添加）
         function addTag() {
             const newTagInput = document.getElementById('newTag');
-            const newTag = newTagInput.value.trim();
-            
-            if (!newTag) {
-                showNotification('标签名称不能为空', 'warning');
-                return;
+            const rawValue = newTagInput.value.trim();
+
+            if (!rawValue) return;
+
+            // 支持中英文逗号分隔
+            const newTags = rawValue.split(/[,，]/).map(t => t.trim()).filter(t => t);
+            let addedCount = 0;
+
+            for (const tag of newTags) {
+                if (!currentEditTags.includes(tag)) {
+                    currentEditTags.push(tag);
+                    addedCount++;
+                }
             }
-            
-            // 检查标签是否已存在
-            if (currentEditTags.includes(newTag)) {
-                showNotification('标签已存在', 'warning');
-                return;
-            }
-            
-            // 添加新标签
-            currentEditTags.push(newTag);
-            
-            // 清空输入框
+
             newTagInput.value = '';
-            
-            // 重新渲染标签列表
             renderCurrentTags();
+
+            if (addedCount > 0 && newTags.length > 1) {
+                showNotification(`已添加 ${addedCount} 个标签`, 'success', '', 2000);
+            }
+        }
+
+        // 从常用标签添加
+        function addCommonTag(tag) {
+            if (!currentEditTags.includes(tag)) {
+                currentEditTags.push(tag);
+                renderCurrentTags();
+            }
+        }
+
+        // 加载常用标签
+        async function loadCommonTags() {
+            const group = document.getElementById('commonTagsGroup');
+            const list = document.getElementById('commonTagsList');
+
+            try {
+                const data = await apiRequest('/accounts/all-tags');
+                const tags = data.tags || [];
+
+                if (tags.length === 0) {
+                    group.style.display = 'none';
+                    return;
+                }
+
+                group.style.display = 'block';
+                list.innerHTML = tags.map(tag =>
+                    `<span class="common-tag" onclick="addCommonTag('${tag.replace(/'/g, "\\'")}')">${tag}</span>`
+                ).join('');
+            } catch (error) {
+                group.style.display = 'none';
+            }
         }
 
         // 删除标签
@@ -3226,28 +3484,54 @@ GET /emails/{email_id}/{message_id}
             document.getElementById('tagsModal').style.display = 'none';
             currentEditAccount = null;
             currentEditTags = [];
+            batchTagMode = false;
         }
 
         // 保存账户标签
         async function saveAccountTags() {
-            if (!currentEditAccount) {
-                closeTagsModal();
-                return;
-            }
-            
-            try {
-                const response = await apiRequest(`/accounts/${currentEditAccount}/tags`, {
-                    method: 'PUT',
-                    body: JSON.stringify({ tags: currentEditTags })
-                });
-                
-                showSuccess('标签更新成功');
-                closeTagsModal();
-                
-                // 重新加载账户列表
-                loadAccounts();
-            } catch (error) {
-                showError('更新标签失败: ' + error.message);
+            if (batchTagMode) {
+                // 批量模式
+                const ids = Array.from(selectedAccounts);
+                if (ids.length === 0) {
+                    closeTagsModal();
+                    return;
+                }
+                const mode = document.querySelector('input[name="tagMode"]:checked')?.value || 'add';
+                try {
+                    const result = await apiRequest('/accounts/batch-tags', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            email_ids: ids,
+                            tags: currentEditTags,
+                            mode: mode
+                        })
+                    });
+                    showSuccess(`成功更新 ${result.updated.length} 个账户的标签`);
+                    invalidateTagsCache();
+                    closeTagsModal();
+                    clearSelection();
+                    loadAccounts(accountsCurrentPage);
+                } catch (error) {
+                    showError('批量更新标签失败: ' + error.message);
+                }
+            } else {
+                // 单个账户模式
+                if (!currentEditAccount) {
+                    closeTagsModal();
+                    return;
+                }
+                try {
+                    await apiRequest(`/accounts/${currentEditAccount}/tags`, {
+                        method: 'PUT',
+                        body: JSON.stringify({ tags: currentEditTags })
+                    });
+                    showSuccess('标签更新成功');
+                    invalidateTagsCache();
+                    closeTagsModal();
+                    loadAccounts(accountsCurrentPage);
+                } catch (error) {
+                    showError('更新标签失败: ' + error.message);
+                }
             }
         }
 
@@ -3256,7 +3540,7 @@ GET /emails/{email_id}/{message_id}
             const accountsStats = document.getElementById('accountsStats');
             document.getElementById('totalAccounts').textContent = accountsTotalCount;
             document.getElementById('currentPage').textContent = accountsCurrentPage;
-            document.getElementById('pageSize').textContent = accountsPageSize;
+            document.getElementById('pageSizeSelect').value = accountsPageSize;
             accountsStats.style.display = accountsTotalCount > 0 ? 'block' : 'none';
         }
         
@@ -3265,20 +3549,20 @@ GET /emails/{email_id}/{message_id}
             const prevBtn = document.getElementById('prevPageBtn');
             const nextBtn = document.getElementById('nextPageBtn');
             const pageNumbers = document.getElementById('pageNumbers');
-            
+
             if (accountsTotalPages <= 1) {
                 accountsPagination.style.display = 'none';
                 return;
             }
-            
+
             accountsPagination.style.display = 'flex';
-            
-            // 更新上一页/下一页按钮
+
             prevBtn.disabled = accountsCurrentPage <= 1;
             nextBtn.disabled = accountsCurrentPage >= accountsTotalPages;
-            
-            // 生成页码
+
             pageNumbers.innerHTML = generatePageNumbers();
+            document.getElementById('totalPagesLabel').textContent = accountsTotalPages;
+            document.getElementById('jumpPageInput').max = accountsTotalPages;
         }
         
         function generatePageNumbers() {
@@ -3343,14 +3627,135 @@ GET /emails/{email_id}/{message_id}
             document.getElementById('tagSearch').value = '';
             currentEmailSearch = '';
             currentTagSearch = '';
+            hideTagAutocomplete();
             loadAccounts(1);
         }
         
         function handleSearchKeyPress(event) {
             if (event.key === 'Enter') {
+                hideTagAutocomplete();
                 searchAccounts();
             }
         }
+
+        // ============================================
+        // 标签搜索自动补全
+        // ============================================
+
+        let allTagsCache = null;
+        let tagAutocompleteIndex = -1;
+
+        async function fetchAllTags() {
+            if (allTagsCache !== null) return allTagsCache;
+            try {
+                const data = await apiRequest('/accounts/all-tags');
+                allTagsCache = data.tags || [];
+                return allTagsCache;
+            } catch (e) {
+                return [];
+            }
+        }
+
+        // 页面加载时或账户变化时刷新标签缓存
+        function invalidateTagsCache() {
+            allTagsCache = null;
+        }
+
+        async function onTagSearchInput() {
+            const input = document.getElementById('tagSearch');
+            const query = input.value.trim().toLowerCase();
+            const dropdown = document.getElementById('tagAutocomplete');
+            tagAutocompleteIndex = -1;
+
+            const tags = await fetchAllTags();
+
+            if (tags.length === 0) {
+                dropdown.classList.remove('show');
+                return;
+            }
+
+            let filtered;
+            if (query === '') {
+                // 空输入时显示所有标签
+                filtered = tags;
+            } else {
+                filtered = tags.filter(t => t.toLowerCase().includes(query));
+            }
+
+            if (filtered.length === 0) {
+                dropdown.innerHTML = '<div class="tag-autocomplete-hint">无匹配标签</div>';
+                dropdown.classList.add('show');
+                return;
+            }
+
+            dropdown.innerHTML = filtered.map((tag, i) => {
+                // 高亮匹配部分
+                let display = tag;
+                if (query) {
+                    const idx = tag.toLowerCase().indexOf(query);
+                    if (idx >= 0) {
+                        display = tag.substring(0, idx)
+                            + '<span class="tag-match">' + tag.substring(idx, idx + query.length) + '</span>'
+                            + tag.substring(idx + query.length);
+                    }
+                }
+                return `<div class="tag-autocomplete-item" data-index="${i}"
+                    onmousedown="selectTagAutocomplete('${tag.replace(/'/g, "\\'")}')">${display}</div>`;
+            }).join('');
+
+            dropdown.classList.add('show');
+        }
+
+        function selectTagAutocomplete(tag) {
+            document.getElementById('tagSearch').value = tag;
+            hideTagAutocomplete();
+            searchAccounts();
+        }
+
+        function hideTagAutocomplete() {
+            document.getElementById('tagAutocomplete').classList.remove('show');
+            tagAutocompleteIndex = -1;
+        }
+
+        function handleTagAutocompleteNav(event) {
+            const dropdown = document.getElementById('tagAutocomplete');
+            if (!dropdown.classList.contains('show')) return;
+
+            const items = dropdown.querySelectorAll('.tag-autocomplete-item');
+            if (items.length === 0) return;
+
+            if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                tagAutocompleteIndex = Math.min(tagAutocompleteIndex + 1, items.length - 1);
+                updateAutocompleteHighlight(items);
+            } else if (event.key === 'ArrowUp') {
+                event.preventDefault();
+                tagAutocompleteIndex = Math.max(tagAutocompleteIndex - 1, 0);
+                updateAutocompleteHighlight(items);
+            } else if (event.key === 'Enter' && tagAutocompleteIndex >= 0) {
+                event.preventDefault();
+                items[tagAutocompleteIndex].dispatchEvent(new Event('mousedown'));
+            } else if (event.key === 'Escape') {
+                hideTagAutocomplete();
+            }
+        }
+
+        function updateAutocompleteHighlight(items) {
+            items.forEach((item, i) => {
+                item.classList.toggle('active', i === tagAutocompleteIndex);
+            });
+            // 滚动到可见
+            if (tagAutocompleteIndex >= 0 && items[tagAutocompleteIndex]) {
+                items[tagAutocompleteIndex].scrollIntoView({ block: 'nearest' });
+            }
+        }
+
+        // 点击外部关闭下拉
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.tag-search-wrapper')) {
+                hideTagAutocomplete();
+            }
+        });
         
         async function deleteAccount(emailId) {
             if (!confirm(`确定要删除账户 ${emailId} 吗？`)) {
@@ -3365,7 +3770,118 @@ GET /emails/{email_id}/{message_id}
                 showError('删除账户失败: ' + error.message);
             }
         }
-        
+
+        // ============================================
+        // 多选功能
+        // ============================================
+
+        function toggleSelectAccount(emailId, checkbox) {
+            if (checkbox.checked) {
+                selectedAccounts.add(emailId);
+            } else {
+                selectedAccounts.delete(emailId);
+            }
+            updateBatchToolbar();
+        }
+
+        function toggleSelectAll() {
+            const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+            const checkboxes = document.querySelectorAll('#accountsList .account-checkbox');
+            if (selectAllCheckbox.checked) {
+                accounts.forEach(acc => selectedAccounts.add(acc.email_id));
+                checkboxes.forEach(cb => cb.checked = true);
+            } else {
+                accounts.forEach(acc => selectedAccounts.delete(acc.email_id));
+                checkboxes.forEach(cb => cb.checked = false);
+            }
+            updateBatchToolbar();
+        }
+
+        function clearSelection() {
+            selectedAccounts.clear();
+            document.querySelectorAll('#accountsList .account-checkbox').forEach(cb => cb.checked = false);
+            const selectAllCb = document.getElementById('selectAllCheckbox');
+            if (selectAllCb) selectAllCb.checked = false;
+            updateBatchToolbar();
+        }
+
+        function updateBatchToolbar() {
+            const toolbar = document.getElementById('batchToolbar');
+            const count = selectedAccounts.size;
+            toolbar.style.display = accounts.length > 0 ? 'flex' : 'none';
+            document.getElementById('selectedCount').textContent = `已选 ${count} 个`;
+
+            const batchActions = toolbar.querySelector('.batch-actions');
+            batchActions.style.display = count > 0 ? 'flex' : 'none';
+
+            // Update select-all checkbox state
+            const selectAllCb = document.getElementById('selectAllCheckbox');
+            const currentPageIds = accounts.map(a => a.email_id);
+            const allSelected = currentPageIds.length > 0 && currentPageIds.every(id => selectedAccounts.has(id));
+            const someSelected = currentPageIds.some(id => selectedAccounts.has(id));
+            selectAllCb.checked = allSelected;
+            selectAllCb.indeterminate = someSelected && !allSelected;
+        }
+
+        async function batchDeleteAccounts() {
+            const ids = Array.from(selectedAccounts);
+            if (ids.length === 0) return;
+
+            if (!confirm(`确定要删除选中的 ${ids.length} 个账户吗？此操作不可撤销。`)) {
+                return;
+            }
+
+            try {
+                const result = await apiRequest('/accounts/batch-delete', {
+                    method: 'POST',
+                    body: JSON.stringify({ email_ids: ids })
+                });
+                showSuccess(`成功删除 ${result.deleted.length} 个账户`);
+                invalidateTagsCache();
+                clearSelection();
+                loadAccounts(accountsCurrentPage);
+            } catch (error) {
+                showError('批量删除失败: ' + error.message);
+            }
+        }
+
+        let batchTagMode = false;
+
+        async function batchEditTags() {
+            const ids = Array.from(selectedAccounts);
+            if (ids.length === 0) return;
+
+            batchTagMode = true;
+            currentEditAccount = null;
+            currentEditTags = [];
+
+            document.getElementById('tagsModalTitle').textContent = `批量管理标签 (${ids.length} 个账户)`;
+            document.getElementById('tagModeGroup').style.display = 'flex';
+            renderCurrentTags();
+            await loadCommonTags();
+            document.getElementById('tagsModal').style.display = 'flex';
+        }
+
+        // ============================================
+        // 分页增强
+        // ============================================
+
+        function jumpToPage() {
+            const input = document.getElementById('jumpPageInput');
+            const page = parseInt(input.value);
+            if (isNaN(page) || page < 1 || page > accountsTotalPages) {
+                showWarning(`请输入 1 到 ${accountsTotalPages} 之间的页码`);
+                return;
+            }
+            input.value = '';
+            loadAccounts(page);
+        }
+
+        function changePageSize(size) {
+            accountsPageSize = parseInt(size);
+            loadAccounts(1);
+        }
+
         // 右键菜单相关变量
         let contextMenuTarget = null;
         

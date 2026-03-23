@@ -170,6 +170,18 @@ class UpdateTagsRequest(BaseModel):
     """更新标签请求模型"""
     tags: List[str]
 
+
+class BatchDeleteRequest(BaseModel):
+    """批量删除请求模型"""
+    email_ids: List[str]
+
+
+class BatchTagsRequest(BaseModel):
+    """批量打标签请求模型"""
+    email_ids: List[str]
+    tags: List[str]
+    mode: str = "add"  # "add" 追加标签, "replace" 替换标签
+
 # ============================================================================
 # IMAP连接池管理
 # ============================================================================
@@ -1185,6 +1197,108 @@ async def delete_account(email_id: str):
     except Exception as e:
         logger.error(f"Error deleting account: {e}")
         raise HTTPException(status_code=500, detail="Failed to delete account")
+
+
+@app.post("/accounts/batch-delete")
+async def batch_delete_accounts(request: BatchDeleteRequest):
+    """批量删除邮箱账户"""
+    try:
+        if not request.email_ids:
+            raise HTTPException(status_code=400, detail="No email IDs provided")
+
+        accounts = {}
+        if Path(ACCOUNTS_FILE).exists():
+            with open(ACCOUNTS_FILE, 'r', encoding='utf-8') as f:
+                accounts = json.load(f)
+
+        deleted = []
+        not_found = []
+        for email_id in request.email_ids:
+            if email_id in accounts:
+                del accounts[email_id]
+                deleted.append(email_id)
+            else:
+                not_found.append(email_id)
+
+        with open(ACCOUNTS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(accounts, f, indent=2, ensure_ascii=False)
+
+        return {
+            "deleted": deleted,
+            "not_found": not_found,
+            "message": f"Successfully deleted {len(deleted)} account(s)."
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error batch deleting accounts: {e}")
+        raise HTTPException(status_code=500, detail="Failed to batch delete accounts")
+
+
+@app.post("/accounts/batch-tags")
+async def batch_update_tags(request: BatchTagsRequest):
+    """批量更新账户标签"""
+    try:
+        if not request.email_ids:
+            raise HTTPException(status_code=400, detail="No email IDs provided")
+
+        accounts = {}
+        if Path(ACCOUNTS_FILE).exists():
+            with open(ACCOUNTS_FILE, 'r', encoding='utf-8') as f:
+                accounts = json.load(f)
+
+        updated = []
+        not_found = []
+        for email_id in request.email_ids:
+            if email_id in accounts:
+                if request.mode == "replace":
+                    accounts[email_id]['tags'] = request.tags
+                else:  # "add"
+                    existing_tags = accounts[email_id].get('tags', [])
+                    merged = list(dict.fromkeys(existing_tags + request.tags))
+                    accounts[email_id]['tags'] = merged
+                updated.append(email_id)
+            else:
+                not_found.append(email_id)
+
+        with open(ACCOUNTS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(accounts, f, indent=2, ensure_ascii=False)
+
+        return {
+            "updated": updated,
+            "not_found": not_found,
+            "message": f"Successfully updated tags for {len(updated)} account(s)."
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error batch updating tags: {e}")
+        raise HTTPException(status_code=500, detail="Failed to batch update tags")
+
+
+@app.get("/accounts/all-tags")
+async def get_all_tags():
+    """获取所有已使用的标签列表"""
+    try:
+        if not Path(ACCOUNTS_FILE).exists():
+            return {"tags": []}
+
+        with open(ACCOUNTS_FILE, 'r', encoding='utf-8') as f:
+            accounts = json.load(f)
+
+        all_tags = set()
+        for account_info in accounts.values():
+            for tag in account_info.get('tags', []):
+                all_tags.add(tag)
+
+        return {"tags": sorted(list(all_tags))}
+
+    except Exception as e:
+        logger.error(f"Error getting all tags: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get tags")
+
 
 @app.get("/")
 async def root():
